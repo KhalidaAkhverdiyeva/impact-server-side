@@ -22,9 +22,10 @@ app.get("/", (req, res) => {
 
 
 app.use(cors({
-    origin: 'http://localhost:3000',
+    origin: ['http://localhost:3000', 'https://impact-rho.vercel.app'],
     credentials: true,
 }));
+
 
 
 connectDB(url);
