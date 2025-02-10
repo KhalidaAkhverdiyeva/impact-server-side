@@ -16,6 +16,10 @@ app.use(express.urlencoded({ extended: true }));
 const PORT = 3001;
 const url = process.env.CONNECTION_URL.replace("<db_password>", process.env.PASSWORD);
 
+app.get("/", (req, res) => {
+    res.send("Welcome to the backend API");
+});
+
 
 app.use(cors({
     origin: 'http://localhost:3000',
