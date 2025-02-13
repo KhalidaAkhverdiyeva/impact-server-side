@@ -14,7 +14,8 @@ const getProduct = async (req, res) => {
             inStock,
             minPrice,
             maxPrice,
-            isNewProduct
+            isNewProduct,
+            sort
         } = req.query;
 
         const filter = {};
@@ -49,10 +50,19 @@ const getProduct = async (req, res) => {
             filter.isNewProduct = isNewProduct === 'true';
         }
 
+        let sortOptions = {};
+        if (sort === 'price:asc') {
+            sortOptions.price = 1; // Low to High
+        } else if (sort === 'price:desc') {
+            sortOptions.price = -1; // High to Low
+        } else {
+            sortOptions = { price: 1, designer: 1, 'colorVariants.color': 1 };
+        }
+
         const products = await Product.find(filter)
             .skip((page - 1) * limit)
             .limit(Number(limit))
-            .sort({ price: 1, designer: 1, 'colorVariants.color': 1 });
+            .sort(sortOptions);
 
         const totalCount = await Product.countDocuments(filter);
 
