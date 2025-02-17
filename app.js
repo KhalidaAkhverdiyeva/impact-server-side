@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
-const cors = require("cors")
+const cors = require("cors");
+const Stripe = require("stripe");
 const connectDB = require("./db/dbserver");
 const productRoutes = require("./routes/product");
 const authRoutes = require("./routes/auth")
@@ -9,6 +10,8 @@ const userRoutes = require("./routes/user");
 dotenv.config();
 
 const app = express();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -25,6 +28,28 @@ app.use(cors({
     origin: ['http://localhost:3000', 'https://impact-rho.vercel.app'],
     credentials: true,
 }));
+app.post("/api/create-checkout-session", async (req, res) => {
+    try {
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ["card"],
+            mode: "payment",
+            line_items: req.body.items.map((item) => ({
+                price_data: {
+                    currency: "usd",
+                    product_data: { name: item.name },
+                    unit_amount: item.price * 100, // Convert to cents
+                },
+                quantity: item.quantity,
+            })),
+            success_url: "http://localhost:3000/success",
+            cancel_url: "http://localhost:3000/cancel",
+        });
+
+        res.json({ id: session.id });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 
 
 

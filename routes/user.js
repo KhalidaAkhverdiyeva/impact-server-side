@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
 
+
 // GET user by ID (unchanged)
 router.get("/:id", async (req, res) => {
     const { id } = req.params;
