@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/user");
+const mongoose = require("mongoose");
 
 
 // GET user by ID (unchanged)
@@ -24,36 +25,64 @@ router.get("/:id", async (req, res) => {
 // Add product to cart (or update if already in cart)
 router.post("/:userId/cart", async (req, res) => {
     const { userId } = req.params;
-    const { productId, colorId, quantity } = req.body;
+    const { items } = req.body; // Expect an array of items
+
+    if (!items || !Array.isArray(items)) {
+        return res.status(400).json({
+            message: "Items array is required"
+        });
+    }
 
     try {
-        // Find the user by ID
         const user = await User.findById(userId);
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Check if the product already exists in the cart
-        const existingItem = user.cart.find(
-            (item) => item.productId.toString() === productId && item.colorId.toString() === colorId
-        );
+        // Process each item in the array
+        for (const item of items) {
+            const { productId, colorId, quantity = 1 } = item;
 
-        if (existingItem) {
-            // If the product already exists, increase the quantity
-            existingItem.quantity += quantity;
-        } else {
-            // Otherwise, add a new product to the cart
-            user.cart.push({ productId, colorId, quantity });
+            if (!productId || !colorId) {
+                return res.status(400).json({
+                    message: "ProductId and colorId are required for each item"
+                });
+            }
+
+            if (!mongoose.Types.ObjectId.isValid(productId) ||
+                !mongoose.Types.ObjectId.isValid(colorId)) {
+                return res.status(400).json({
+                    message: `Invalid productId or colorId format for item: ${productId}`
+                });
+            }
+
+            // Check if the product already exists
+            const existingItem = user.cart.find(
+                (cartItem) =>
+                    cartItem.productId.toString() === productId &&
+                    cartItem.colorId.toString() === colorId
+            );
+
+            if (existingItem) {
+                existingItem.quantity += quantity;
+            } else {
+                user.cart.push({
+                    productId,
+                    colorId,
+                    quantity: Math.max(1, quantity)
+                });
+            }
         }
 
-        // Save the updated user
-        await user.save();
-
-        res.json(user.cart);
+        const savedUser = await user.save();
+        res.json(savedUser.cart);
     } catch (error) {
-        console.error("Error adding product to cart:", error);
-        res.status(500).json({ message: "Server error" });
+        console.error("Error adding products to cart:", error);
+        res.status(500).json({
+            message: "Server error",
+            error: error.message
+        });
     }
 });
 

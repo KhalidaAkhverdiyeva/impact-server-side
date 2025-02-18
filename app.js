@@ -28,28 +28,37 @@ app.use(cors({
     origin: ['http://localhost:3000', 'https://impact-rho.vercel.app'],
     credentials: true,
 }));
-app.post("/api/create-checkout-session", async (req, res) => {
+
+// Create a Payment Intent
+app.post("/api/checkout", async (req, res) => {
     try {
+        const { items } = req.body;
+
+        if (!items?.length) {
+            return res.status(400).json({ error: "No items provided" });
+        }
+
+        console.log('Received items:', items); // Add logging
+
         const session = await stripe.checkout.sessions.create({
             payment_method_types: ["card"],
+            line_items: items,
             mode: "payment",
-            line_items: req.body.items.map((item) => ({
-                price_data: {
-                    currency: "usd",
-                    product_data: { name: item.name },
-                    unit_amount: item.price * 100, // Convert to cents
-                },
-                quantity: item.quantity,
-            })),
-            ssuccess_url: successUrl,
-            cancel_url: cancelUrl,
+            success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.FRONTEND_URL}/cart`,
         });
 
-        res.json({ id: session.id });
+        console.log('Session created:', session.id); // Add logging
+        return res.status(200).json({ id: session.id });
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('Stripe checkout error:', error);
+        return res.status(500).json({
+            error: error.message || "Failed to create checkout session"
+        });
     }
 });
+
 
 
 
